@@ -117,3 +117,77 @@ MIT License
 ---
 
 **Automated with Ansible** ⚡
+
+## 🛠️ Setup Instructions for New Users
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Filopateer-Shaker/notes-app-ansible.git
+cd notes-app-ansible
+```
+
+### 2. Create Vault Password File
+```bash
+echo "your-secure-password" > .vault_pass
+chmod 600 .vault_pass
+```
+
+### 3. Create Encrypted Vault
+```bash
+ansible-vault create group_vars/vault.yml --vault-password-file .vault_pass
+```
+
+Add this content (change the passwords):
+```yaml
+---
+vault_db_password: "YourSecureDBPassword"
+vault_db_root_password: "YourSecureRootPassword"
+vault_secret_key: "generate-with-command-below"
+```
+
+**Generate secret key:**
+```bash
+python3 -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### 4. Create Inventory File
+
+Create `inventory.yml`:
+```yaml
+---
+all:
+  children:
+    web_servers:
+      hosts:
+        my-server:
+          ansible_host: YOUR_EC2_PUBLIC_IP
+          ansible_user: ec2-user
+          ansible_ssh_private_key_file: ~/.ssh/your-key.pem
+          ansible_python_interpreter: /usr/bin/python3
+```
+
+### 5. Update ansible.cfg
+
+Edit `ansible.cfg` and change:
+```ini
+[defaults]
+inventory = inventory.yml
+```
+
+### 6. Test Connection
+```bash
+ansible all -m ping
+```
+
+### 7. Deploy
+```bash
+ansible-playbook playbook.yml
+```
+
+## 🔐 Security Notes
+
+- Never commit `.vault_pass` or `group_vars/vault.yml` unencrypted
+- Never commit SSH private keys
+- Change all default passwords
+- The vault file in this repo is encrypted - you need to create your own
+
