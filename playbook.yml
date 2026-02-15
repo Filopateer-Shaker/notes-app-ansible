@@ -1,0 +1,47 @@
+- name: Deploy Notes App to EC2 (Amazon Linux 2023 / RHEL 10)
+  hosts: all
+  become: true
+  
+  pre_tasks:
+    - name: Load vault variables
+      include_vars:
+        file: group_vars/vault.yml
+        
+    - name: Display deployment information
+      debug:
+        msg: "Deploying {{ app_name }} to {{ inventory_hostname }}"
+    
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 60
+    
+    - name: Gather system facts
+      setup:
+
+  roles:
+    - notes-app
+
+  post_tasks:
+    - name: Wait for application to be accessible
+      wait_for:
+        port: "{{ app_port }}"
+        delay: 5
+        timeout: 60
+    
+    - name: Verify application is running
+      uri:
+        url: "http://localhost:{{ app_port }}"
+        status_code: 200
+      register: app_check
+      retries: 3
+      delay: 5
+      ignore_errors: yes
+
+    - name: Display deployment summary
+      debug:
+        msg:
+          - "=========================================="
+          - "Deployment completed successfully!"
+          - "=========================================="
+          - "Application URL: http://{{ ansible_host }}:{{ app_port }}"
+          - "=========================================="

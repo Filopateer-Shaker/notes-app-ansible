@@ -1,0 +1,19 @@
+---
+# Packages for Amazon Linux 2023
+required_packages:
+  - python3
+  - python3-pip
+  - git
+  - mariadb105-server
+  - firewalld
+
+# Packages for RHEL 10
+required_packages_rhel:
+  - python3
+  - python3-pip
+  - git
+  - mariadb-server
+  - firewalld
+
+pip_packages:
+  - gunicorn

@@ -1,0 +1,74 @@
+- name: Check if EBS volume is attached
+  stat:
+    path: "{{ ebs_device }}"
+  register: ebs_volume
+
+- name: Setup EBS volume for backups
+  block:
+    - name: Check if volume is formatted
+      command: "blkid {{ ebs_device }}"
+      register: volume_format
+      failed_when: false
+      changed_when: false
+
+    - name: Format EBS volume
+      filesystem:
+        fstype: ext4
+        dev: "{{ ebs_device }}"
+      when: volume_format.rc != 0
+
+    - name: Create backup mount point
+      file:
+        path: "{{ backup_directory }}"
+        state: directory
+        mode: '0755'
+
+    - name: Mount EBS volume
+      mount:
+        path: "{{ backup_directory }}"
+        src: "{{ ebs_device }}"
+        fstype: ext4
+        opts: defaults,nofail
+        state: mounted
+
+    - name: Set backup directory permissions
+      file:
+        path: "{{ backup_directory }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+  when: ebs_volume.stat.exists
+
+- name: Create backup directory (if no EBS)
+  file:
+    path: "{{ backup_directory }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  when: not ebs_volume.stat.exists
+
+- name: Create backup script from template
+  template:
+    src: backup-notes.sh.j2
+    dest: /usr/local/bin/backup-notes.sh
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Setup backup cron job
+  cron:
+    name: "Notes app database backup"
+    minute: "{{ backup_schedule_minute }}"
+    hour: "{{ backup_schedule_hour }}"
+    job: "/usr/local/bin/backup-notes.sh >> /var/log/notes-backup.log 2>&1"
+    user: root
+    state: present
+
+- name: Create backup log file
+  file:
+    path: /var/log/notes-backup.log
+    state: touch
+    owner: root
+    group: root
+    mode: '0644'

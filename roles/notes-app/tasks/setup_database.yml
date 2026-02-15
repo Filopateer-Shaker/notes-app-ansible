@@ -1,0 +1,27 @@
+---
+- name: Create database setup script
+  copy:
+    content: |
+      #!/bin/bash
+      mysql -u root << MYSQL_SCRIPT
+      ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ db_root_password }}';
+      FLUSH PRIVILEGES;
+      DELETE FROM mysql.user WHERE User='';
+      DROP DATABASE IF EXISTS test;
+      CREATE DATABASE IF NOT EXISTS {{ db_name }};
+      CREATE USER IF NOT EXISTS '{{ db_user }}'@'localhost' IDENTIFIED BY '{{ db_password }}';
+      GRANT ALL PRIVILEGES ON {{ db_name }}.* TO '{{ db_user }}'@'localhost';
+      FLUSH PRIVILEGES;
+      MYSQL_SCRIPT
+    dest: /tmp/setup_db.sh
+    mode: '0700'
+
+- name: Run database setup script
+  shell: /tmp/setup_db.sh
+  register: db_setup
+  ignore_errors: yes
+
+- name: Remove setup script
+  file:
+    path: /tmp/setup_db.sh
+    state: absent

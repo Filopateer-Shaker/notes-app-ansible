@@ -1,0 +1,82 @@
+- name: Ensure application directory exists
+  file:
+    path: "{{ app_directory }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+
+- name: Check if application already exists
+  stat:
+    path: "{{ app_directory }}/.git"
+  register: app_exists
+
+- name: Clone application repository
+  git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_directory }}"
+    version: main
+    force: yes
+  become_user: "{{ app_user }}"
+  when: not app_exists.stat.exists
+
+- name: Update application repository
+  git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_directory }}"
+    version: main
+    update: yes
+  become_user: "{{ app_user }}"
+  when: app_exists.stat.exists
+
+- name: Create Python virtual environment
+  command: "{{ python_version }} -m venv {{ venv_path }}"
+  args:
+    creates: "{{ venv_path }}/bin/activate"
+  become_user: "{{ app_user }}"
+
+- name: Upgrade pip in virtual environment
+  pip:
+    name: pip
+    state: latest
+    virtualenv: "{{ venv_path }}"
+  become_user: "{{ app_user }}"
+
+- name: Install Python dependencies
+  pip:
+    requirements: "{{ app_directory }}/requirements.txt"
+    virtualenv: "{{ venv_path }}"
+  become_user: "{{ app_user }}"
+
+- name: Install Gunicorn in virtual environment
+  pip:
+    name: gunicorn
+    virtualenv: "{{ venv_path }}"
+  become_user: "{{ app_user }}"
+
+- name: Generate secret key if not provided
+  command: "{{ python_version }} -c 'import secrets; print(secrets.token_hex(32))'"
+  register: generated_secret_key
+  when: secret_key is not defined or secret_key == ''
+  changed_when: false
+
+- name: Set secret key variable
+  set_fact:
+    secret_key: "{{ generated_secret_key.stdout if generated_secret_key.stdout is defined else secret_key }}"
+
+- name: Create .env file from template
+  template:
+    src: .env.j2
+    dest: "{{ app_directory }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0600'
+  no_log: true
+
+- name: Set correct permissions on application directory
+  file:
+    path: "{{ app_directory }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    recurse: yes
+    mode: '0755'

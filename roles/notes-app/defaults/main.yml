@@ -1,0 +1,4 @@
+---
+python_version: python3
+venv_path: "{{ app_directory }}/venv"
+systemd_service_name: notes-app

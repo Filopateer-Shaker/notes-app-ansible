@@ -1,0 +1,20 @@
+- name: Include installation tasks
+  import_tasks: install_dependencies.yml
+  tags: [install, dependencies]
+
+- name: Include database setup tasks
+  import_tasks: setup_database.yml
+  tags: [database, setup]
+
+- name: Include application deployment tasks
+  import_tasks: deploy_application.yml
+  tags: [deploy, application]
+
+- name: Include service configuration tasks
+  import_tasks: configure_service.yml
+  tags: [service, configure]
+
+- name: Include backup setup tasks
+  import_tasks: setup_backup.yml
+  when: backup_enabled
+  tags: [backup, setup]

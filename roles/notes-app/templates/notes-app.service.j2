@@ -1,0 +1,19 @@
+[Unit]
+Description=Notes App - Flask Application
+After=network.target mariadb.service
+Wants=mariadb.service
+
+[Service]
+Type=notify
+User={{ app_user }}
+Group={{ app_group }}
+WorkingDirectory={{ app_directory }}
+Environment="PATH={{ venv_path }}/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart={{ venv_path }}/bin/gunicorn -w {{ gunicorn_workers }} -b 0.0.0.0:{{ app_port }} app:app
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,14 @@
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Restart notes-app
+  systemd:
+    name: "{{ systemd_service_name }}"
+    state: restarted
+
+- name: Restart mariadb
+  systemd:
+    name: mariadb
+    state: restarted

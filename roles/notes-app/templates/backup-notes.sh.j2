@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# Notes App Database Backup Script
+# Automated by Ansible
+#
+
+# Configuration
+BACKUP_DIR="{{ backup_directory }}"
+DATE=$(date +%Y%m%d_%H%M%S)
+DB_USER="{{ db_user }}"
+DB_PASS="{{ db_password }}"
+DB_NAME="{{ db_name }}"
+RETENTION_DAYS={{ backup_retention_days }}
+
+# Create backup directory if not exists
+mkdir -p "$BACKUP_DIR"
+
+# Backup database
+echo "=========================================="
+echo "Starting backup at $(date)"
+echo "=========================================="
+
+mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_DIR/notesdb_$DATE.sql"
+
+# Check if backup was successful
+if [ $? -eq 0 ]; then
+    echo "✓ Backup completed successfully: notesdb_$DATE.sql"
+    
+    # Compress the backup
+    gzip "$BACKUP_DIR/notesdb_$DATE.sql"
+    echo "✓ Backup compressed: notesdb_$DATE.sql.gz"
+    
+    # Get backup size
+    BACKUP_SIZE=$(du -h "$BACKUP_DIR/notesdb_$DATE.sql.gz" | cut -f1)
+    echo "✓ Backup size: $BACKUP_SIZE"
+    
+    # Delete backups older than retention period
+    DELETED=$(find "$BACKUP_DIR" -name "notesdb_*.sql.gz" -mtime +$RETENTION_DAYS -delete -print | wc -l)
+    echo "✓ Old backups cleaned up: $DELETED files removed (retention: $RETENTION_DAYS days)"
+    
+    # List current backups
+    echo ""
+    echo "Current backups:"
+    ls -lh "$BACKUP_DIR"/notesdb_*.sql.gz 2>/dev/null || echo "No backups found"
+else
+    echo "✗ Backup failed!"
+    exit 1
+fi
+
+echo "=========================================="
+echo "Backup process completed at $(date)"
+echo "=========================================="

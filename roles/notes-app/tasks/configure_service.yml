@@ -1,0 +1,44 @@
+- name: Create systemd service file
+  template:
+    src: notes-app.service.j2
+    dest: /etc/systemd/system/{{ systemd_service_name }}.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: 
+    - Reload systemd
+    - Restart notes-app
+
+- name: Ensure systemd is reloaded
+  systemd:
+    daemon_reload: yes
+
+- name: Enable notes-app service
+  systemd:
+    name: "{{ systemd_service_name }}"
+    enabled: yes
+
+- name: Start notes-app service
+  systemd:
+    name: "{{ systemd_service_name }}"
+    state: started
+  register: service_start
+  ignore_errors: yes
+
+- name: Check service status if start failed
+  shell: systemctl status {{ systemd_service_name }}
+  register: service_status
+  when: service_start is failed
+  ignore_errors: yes
+
+- name: Display service status on failure
+  debug:
+    msg: "{{ service_status.stdout_lines }}"
+  when: service_start is failed
+
+- name: Wait for application to be ready
+  wait_for:
+    port: "{{ app_port }}"
+    delay: 5
+    timeout: 60
+  when: service_start is succeeded
