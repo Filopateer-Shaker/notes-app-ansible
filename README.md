@@ -108,11 +108,7 @@ ansible all -m shell -a "ls -lh /backup/" -b
 
 ## 👤 Author
 
-**Your Name**
-
-## 📄 License
-
-MIT License
+**Filopateer shaker**
 
 ---
 
