@@ -14,11 +14,13 @@
   dnf:
     name: "{{ required_packages }}"
     state: present
-  when: 
+  when:
     - ansible_distribution == "Amazon"
     - ansible_distribution_major_version == "2023"
-  ignore_errors: yes
   register: amazon_packages
+  retries: 3
+  delay: 5
+  until: amazon_packages is succeeded
 
 - name: Install required packages for RHEL 10
   dnf:
@@ -27,19 +29,6 @@
   when:
     - ansible_distribution == "RedHat"
     - ansible_distribution_major_version == "10"
-
-- name: Install fallback packages if Amazon Linux packages failed
-  dnf:
-    name: 
-      - python3
-      - python3-pip
-      - git
-      - mariadb-server
-      - firewalld
-    state: present
-  when:
-    - ansible_distribution == "Amazon"
-    - amazon_packages is failed
 
 - name: Start and enable MariaDB service
   systemd:
@@ -62,7 +51,7 @@
 
 - name: Install Python pip packages on target servers
   pip:
-    name: 
+    name:
       - PyMySQL
       - cryptography
     state: present

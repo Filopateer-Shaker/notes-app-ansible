@@ -5,40 +5,48 @@
     owner: root
     group: root
     mode: '0644'
-  notify: 
+  notify:
     - Reload systemd
     - Restart notes-app
 
-- name: Ensure systemd is reloaded
+- name: Reload systemd daemon
   systemd:
     daemon_reload: yes
 
-- name: Enable notes-app service
-  systemd:
-    name: "{{ systemd_service_name }}"
-    enabled: yes
+- block:
+    - name: Enable notes-app service
+      systemd:
+        name: "{{ systemd_service_name }}"
+        enabled: yes
 
-- name: Start notes-app service
-  systemd:
-    name: "{{ systemd_service_name }}"
-    state: started
-  register: service_start
-  ignore_errors: yes
+    - name: Start notes-app service
+      systemd:
+        name: "{{ systemd_service_name }}"
+        state: started
 
-- name: Check service status if start failed
-  shell: systemctl status {{ systemd_service_name }}
-  register: service_status
-  when: service_start is failed
-  ignore_errors: yes
+    - name: Wait for application to be ready
+      wait_for:
+        port: "{{ app_port }}"
+        delay: 5
+        timeout: 60
 
-- name: Display service status on failure
-  debug:
-    msg: "{{ service_status.stdout_lines }}"
-  when: service_start is failed
+  rescue:
+    - name: Show service status
+      shell: systemctl status {{ systemd_service_name }} --no-pager
+      register: service_status
+      changed_when: false
 
-- name: Wait for application to be ready
-  wait_for:
-    port: "{{ app_port }}"
-    delay: 5
-    timeout: 60
-  when: service_start is succeeded
+    - debug:
+        var: service_status.stdout_lines
+
+    - name: Show recent logs
+      shell: journalctl -u {{ systemd_service_name }} -n 80 --no-pager
+      register: service_logs
+      changed_when: false
+
+    - debug:
+        var: service_logs.stdout_lines
+
+    - name: Fail deployment if service failed
+      fail:
+        msg: "notes-app service failed to start."

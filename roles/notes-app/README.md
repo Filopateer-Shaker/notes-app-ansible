@@ -1,30 +1,61 @@
-Role Name
-=========
+# Ansible Role: Notes App
 
-A brief description of the role goes here.
+Automates deployment of a Flask-based Notes application with MariaDB on Amazon Linux 2023.
 
-Requirements
-------------
+## Features
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+- ✅ Full stack deployment (Python, Flask, MariaDB, Gunicorn)
+- ✅ Systemd service configuration (auto-start on boot)
+- ✅ Automated daily database backups
+- ✅ Firewall configuration
+- ✅ Security hardening
 
-Role Variables
---------------
+## Requirements
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+- Ansible 2.9+
+- Target: Amazon Linux 2023 or RHEL 10
+- Python 3.8+
 
-Dependencies
-------------
+## Role Variables
+```yaml
+app_port: 8000
+gunicorn_workers: 4
+backup_enabled: true
+backup_retention_days: 7
+db_name: notesdb
+db_user: notesuser
+```
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+See `defaults/main.yml` for all variables.
 
-Example Playbook
-----------------
+## Dependencies
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+None.
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Example Playbook
+```yaml
+- hosts: servers
+  become: true
+  
+  vars:
+    vault_db_password: "SecurePassword"
+    vault_db_root_password: "SecureRootPassword"
+    vault_secret_key: "your-secret-key"
+  
+  roles:
+    - filopateer_shaker.notes_app
+```
 
+## Installation
+```bash
+ansible-galaxy install filopateer_shaker.notes_app
+```
 
+## License
+
+MIT
+
+## Author
+
+Filopateer Shaker
+- GitHub: [@Filopateer-Shaker](https://github.com/Filopateer-Shaker)

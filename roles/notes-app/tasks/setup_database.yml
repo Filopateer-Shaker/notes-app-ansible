@@ -1,27 +1,52 @@
----
-- name: Create database setup script
-  copy:
-    content: |
-      #!/bin/bash
-      mysql -u root << MYSQL_SCRIPT
-      ALTER USER 'root'@'localhost' IDENTIFIED BY '{{ db_root_password }}';
-      FLUSH PRIVILEGES;
-      DELETE FROM mysql.user WHERE User='';
-      DROP DATABASE IF EXISTS test;
-      CREATE DATABASE IF NOT EXISTS {{ db_name }};
-      CREATE USER IF NOT EXISTS '{{ db_user }}'@'localhost' IDENTIFIED BY '{{ db_password }}';
-      GRANT ALL PRIVILEGES ON {{ db_name }}.* TO '{{ db_user }}'@'localhost';
-      FLUSH PRIVILEGES;
-      MYSQL_SCRIPT
-    dest: /tmp/setup_db.sh
-    mode: '0700'
+- name: Ensure MariaDB is running
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
 
-- name: Run database setup script
-  shell: /tmp/setup_db.sh
-  register: db_setup
-  ignore_errors: yes
+- name: Install MySQL Python dependency
+  pip:
+    name: PyMySQL
+    state: present
+    executable: pip3
 
-- name: Remove setup script
-  file:
-    path: /tmp/setup_db.sh
+- name: Try setting root password (first run)
+  community.mysql.mysql_user:
+    name: root
+    host: localhost
+    password: "{{ db_root_password }}"
+    login_unix_socket: /var/lib/mysql/mysql.sock
+  failed_when: false
+  changed_when: false
+
+- name: Create application database
+  community.mysql.mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_user: root
+    login_password: "{{ db_root_password }}"
+
+- name: Create database user
+  community.mysql.mysql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    priv: "{{ db_name }}.*:ALL"
+    host: localhost
+    state: present
+    login_user: root
+    login_password: "{{ db_root_password }}"
+
+- name: Remove anonymous users
+  community.mysql.mysql_user:
+    name: ""
+    host_all: yes
     state: absent
+    login_user: root
+    login_password: "{{ db_root_password }}"
+
+- name: Remove test database
+  community.mysql.mysql_db:
+    name: test
+    state: absent
+    login_user: root
+    login_password: "{{ db_root_password }}"
